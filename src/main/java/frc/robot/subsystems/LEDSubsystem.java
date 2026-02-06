@@ -6,23 +6,23 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.LEDConstants;
-import org.photonvision.PhotonCamera;
+import java.util.function.BooleanSupplier;
 
 public class LEDSubsystem extends SubsystemBase
 {
 
   private final AddressableLED led;
   private final AddressableLEDBuffer ledBuffer;
-  private final PhotonCamera camera;
+  private final BooleanSupplier visionWorking;
 
   /**
    * Creates a new LEDSubsystem.
    *
-   * @param camera The PhotonVision camera used for vision-based odometry.
+   * @param visionWorking Supplier that returns true when vision odometry is providing good data.
    */
-  public LEDSubsystem(PhotonCamera camera)
+  public LEDSubsystem(BooleanSupplier visionWorking)
   {
-    this.camera = camera;
+    this.visionWorking = visionWorking;
 
     led = new AddressableLED(LEDConstants.LED_PWM_PORT);
     ledBuffer = new AddressableLEDBuffer(LEDConstants.LED_LENGTH);
@@ -34,7 +34,7 @@ public class LEDSubsystem extends SubsystemBase
   @Override
   public void periodic()
   {
-    if (hasGoodVisionOdometry())
+    if (visionWorking.getAsBoolean())
     {
       setAllColor(0, 255, 0); // Green when vision odometry is good
     } else
@@ -43,23 +43,6 @@ public class LEDSubsystem extends SubsystemBase
     }
 
     led.setData(ledBuffer);
-  }
-
-  /**
-   * Checks whether PhotonVision is currently providing good odometry data. This requires the camera to see at least one
-   * AprilTag target with low pose ambiguity.
-   *
-   * @return true if vision odometry is reliable.
-   */
-  private boolean hasGoodVisionOdometry()
-  {
-    var result = camera.getLatestResult();
-    if (!result.hasTargets())
-    {
-      return false;
-    }
-    return result.getBestTarget().getPoseAmbiguity() < LEDConstants.AMBIGUITY_THRESHOLD
-           && result.getBestTarget().getPoseAmbiguity() >= 0;
   }
 
   /**

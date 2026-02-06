@@ -53,6 +53,10 @@ public class SwerveSubsystem extends SubsystemBase
    * AprilTag field layout.
    */
   private final AprilTagFieldLayout aprilTagFieldLayout = AprilTagFields.k2024Crescendo.loadAprilTagLayoutField();
+  /**
+   * Whether vision is currently providing good odometry data. Set by the vision processing loop, read by LEDSubsystem.
+   */
+  private boolean visionOdometryGood = false;
 
   /**
    * Initialize {@link SwerveDrive} with the directory provided.
@@ -601,5 +605,26 @@ public class SwerveSubsystem extends SubsystemBase
   public void addFakeVisionReading()
   {
     swerveDrive.addVisionMeasurement(new Pose2d(3, 3, Rotation2d.fromDegrees(65)), Timer.getFPGATimestamp());
+  }
+
+  /**
+   * Returns whether vision odometry is currently providing good data. Intended to be read by the LED subsystem.
+   *
+   * @return true if at least one camera is providing reliable pose estimates.
+   */
+  public boolean isVisionOdometryGood()
+  {
+    return visionOdometryGood;
+  }
+
+  /**
+   * Called from the vision processing loop to indicate whether vision odometry is reliable. This should be set each
+   * cycle by your multi-camera odometry code.
+   *
+   * @param good true if any camera is providing a good pose estimate.
+   */
+  public void setVisionOdometryGood(boolean good)
+  {
+    this.visionOdometryGood = good;
   }
 }

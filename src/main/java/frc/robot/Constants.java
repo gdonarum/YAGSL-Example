@@ -53,9 +53,7 @@ public final class Constants
   public static final class LEDConstants
   {
 
-    public static final int    LED_PWM_PORT        = 0;
-    public static final int    LED_LENGTH           = 60;
-    public static final double AMBIGUITY_THRESHOLD = 0.2;
-    public static final String CAMERA_NAME         = "photoncamera";
+    public static final int LED_PWM_PORT = 0;
+    public static final int LED_LENGTH   = 60;
   }
 }
