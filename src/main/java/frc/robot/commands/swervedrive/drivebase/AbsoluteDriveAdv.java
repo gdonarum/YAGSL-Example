@@ -105,7 +105,7 @@ public class AbsoluteDriveAdv extends Command
     {
       if (headingX == 0 && headingY == 0 && Math.abs(headingAdjust.getAsDouble()) == 0)
       {
-        // Get the curret Heading
+        // Get the current Heading
         Rotation2d currentHeading = swerve.getHeading();
 
         // Set the Current Heading to the desired Heading

@@ -4,12 +4,16 @@
 
 package frc.robot;
 
+import com.pathplanner.lib.auto.NamedCommands;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -29,65 +33,30 @@ public class RobotContainer
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
   final CommandXboxController driverXbox = new CommandXboxController(0);
-  // The robot's subsystems and commands are defined here...
+
   private final SwerveSubsystem drivebase = new SwerveSubsystem(new File(Filesystem.getDeployDirectory(),
                                                                          "swerve/neo"));
+
+  // Autonomous command chooser shown on SmartDashboard/Shuffleboard
+  private final SendableChooser<Command> autoChooser = new SendableChooser<>();
 
   /**
    * The container for the robot. Contains subsystems, OI devices, and commands.
    */
   public RobotContainer()
   {
+    // Register named commands for PathPlanner autos
+    NamedCommands.registerCommand("test", Commands.print("Named command: test"));
+
+    // Silence joystick connection warnings when no joystick is plugged in during testing
+    DriverStation.silenceJoystickConnectionWarning(true);
+
     // Configure the trigger bindings
     configureBindings();
 
-    // Applies deadbands and inverts controls because joysticks
-    // are back-right positive while robot
-    // controls are front-left positive
-    // left stick controls translation
-    // right stick controls the rotational velocity 
-    // buttons are quick rotation positions to different ways to face
-    // WARNING: default buttons are on the same buttons as the ones defined in configureBindings
-    AbsoluteDriveAdv closedAbsoluteDriveAdv = new AbsoluteDriveAdv(drivebase,
-                                                                   () -> -MathUtil.applyDeadband(driverXbox.getLeftY(),
-                                                                                                 OperatorConstants.LEFT_Y_DEADBAND),
-                                                                   () -> -MathUtil.applyDeadband(driverXbox.getLeftX(),
-                                                                                                 OperatorConstants.LEFT_X_DEADBAND),
-                                                                   () -> -MathUtil.applyDeadband(driverXbox.getRightX(),
-                                                                                                 OperatorConstants.RIGHT_X_DEADBAND),
-                                                                   driverXbox.getHID()::getYButtonPressed,
-                                                                   driverXbox.getHID()::getAButtonPressed,
-                                                                   driverXbox.getHID()::getXButtonPressed,
-                                                                   driverXbox.getHID()::getBButtonPressed);
-
-    // Applies deadbands and inverts controls because joysticks
-    // are back-right positive while robot
-    // controls are front-left positive
-    // left stick controls translation
-    // right stick controls the desired angle NOT angular rotation
-    Command driveFieldOrientedDirectAngle = drivebase.driveCommand(
-        () -> MathUtil.applyDeadband(driverXbox.getLeftY(), OperatorConstants.LEFT_Y_DEADBAND),
-        () -> MathUtil.applyDeadband(driverXbox.getLeftX(), OperatorConstants.LEFT_X_DEADBAND),
-        () -> driverXbox.getRightX(),
-        () -> driverXbox.getRightY());
-
-    // Applies deadbands and inverts controls because joysticks
-    // are back-right positive while robot
-    // controls are front-left positive
-    // left stick controls translation
-    // right stick controls the angular velocity of the robot
-    Command driveFieldOrientedAnglularVelocity = drivebase.driveCommand(
-        () -> MathUtil.applyDeadband(driverXbox.getLeftY(), OperatorConstants.LEFT_Y_DEADBAND),
-        () -> MathUtil.applyDeadband(driverXbox.getLeftX(), OperatorConstants.LEFT_X_DEADBAND),
-        () -> driverXbox.getRightX() * 0.5);
-
-    Command driveFieldOrientedDirectAngleSim = drivebase.simDriveCommand(
-        () -> MathUtil.applyDeadband(driverXbox.getLeftY(), OperatorConstants.LEFT_Y_DEADBAND),
-        () -> MathUtil.applyDeadband(driverXbox.getLeftX(), OperatorConstants.LEFT_X_DEADBAND),
-        () -> driverXbox.getRawAxis(2));
-
-    drivebase.setDefaultCommand(
-        !RobotBase.isSimulation() ? driveFieldOrientedDirectAngle : driveFieldOrientedDirectAngleSim);
+    // Populate auto chooser and push to dashboard
+    autoChooser.setDefaultOption("New Auto", drivebase.getAutonomousCommand("New Auto"));
+    SmartDashboard.putData("Auto Chooser", autoChooser);
   }
 
   /**
@@ -99,16 +68,47 @@ public class RobotContainer
    */
   private void configureBindings()
   {
-    // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
+    // Left stick controls translation (front-left positive).
+    // Right stick controls angular velocity (or heading angle depending on mode).
+    Command driveFieldOrientedAnglularVelocity = drivebase.driveCommand(
+        () -> MathUtil.applyDeadband(driverXbox.getLeftY(), OperatorConstants.LEFT_Y_DEADBAND),
+        () -> MathUtil.applyDeadband(driverXbox.getLeftX(), OperatorConstants.LEFT_X_DEADBAND),
+        () -> driverXbox.getRightX() * 0.5);
 
-    driverXbox.a().onTrue((Commands.runOnce(drivebase::zeroGyro)));
+    Command driveFieldOrientedDirectAngle = drivebase.driveCommand(
+        () -> MathUtil.applyDeadband(driverXbox.getLeftY(), OperatorConstants.LEFT_Y_DEADBAND),
+        () -> MathUtil.applyDeadband(driverXbox.getLeftX(), OperatorConstants.LEFT_X_DEADBAND),
+        () -> driverXbox.getRightX(),
+        () -> driverXbox.getRightY());
+
+    Command driveFieldOrientedDirectAngleSim = drivebase.simDriveCommand(
+        () -> MathUtil.applyDeadband(driverXbox.getLeftY(), OperatorConstants.LEFT_Y_DEADBAND),
+        () -> MathUtil.applyDeadband(driverXbox.getLeftX(), OperatorConstants.LEFT_X_DEADBAND),
+        () -> driverXbox.getRawAxis(2));
+
+    // Use direct-angle mode by default; sim uses simplified sim command
+    drivebase.setDefaultCommand(
+        !RobotBase.isSimulation() ? driveFieldOrientedDirectAngle : driveFieldOrientedDirectAngleSim);
+
+    // A: Zero gyro
+    driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));
+
+    // X: Add a fake vision reading (for testing pose estimation)
     driverXbox.x().onTrue(Commands.runOnce(drivebase::addFakeVisionReading));
+
+    // B: Pathfind to (4, 4) on the field
     driverXbox.b().whileTrue(
         Commands.deferredProxy(() -> drivebase.driveToPose(
-                                   new Pose2d(new Translation2d(4, 4), Rotation2d.fromDegrees(0)))
-                              ));
-    driverXbox.y().whileTrue(drivebase.aimAtSpeaker(2));
-    // driverXbox.x().whileTrue(Commands.runOnce(drivebase::lock, drivebase).repeatedly());
+                                   new Pose2d(new Translation2d(4, 4), Rotation2d.fromDegrees(0)))));
+
+    // Left bumper: Lock wheels (X-stance)
+    driverXbox.leftBumper().whileTrue(Commands.runOnce(drivebase::lock, drivebase).repeatedly());
+
+    // Right bumper: Switch to angular-velocity drive mode while held
+    driverXbox.rightBumper().whileTrue(driveFieldOrientedAnglularVelocity);
+
+    // Start: Zero gyro with alliance awareness (red alliance rotates 180°)
+    driverXbox.start().onTrue(Commands.runOnce(drivebase::zeroGyroWithAlliance));
   }
 
   /**
@@ -118,13 +118,7 @@ public class RobotContainer
    */
   public Command getAutonomousCommand()
   {
-    // An example command will be run in autonomous
-    return drivebase.getAutonomousCommand("New Auto");
-  }
-
-  public void setDriveMode()
-  {
-    //drivebase.setDefaultCommand();
+    return autoChooser.getSelected();
   }
 
   public void setMotorBrake(boolean brake)
